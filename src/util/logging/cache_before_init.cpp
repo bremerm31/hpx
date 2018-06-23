@@ -1,4 +1,4 @@
-// ts_none.hpp
+// cache_before_init.cpp
 
 // Boost Logging library
 //
@@ -13,29 +13,13 @@
 // See http://www.boost.org for updates, documentation, and revision history.
 // See http://www.torjo.com/log2/ for more details
 
+#include <hpx/config.hpp>
 
-#ifndef JT28092007_HPX_LOG_TS_HPP_none
-#define JT28092007_HPX_LOG_TS_HPP_none
+#include <hpx/util/logging/format/optimize.hpp>
+#include <hpx/util/logging/detail/cache_before_init.hpp>
 
-namespace hpx { namespace util { namespace logging {
+namespace hpx { namespace util { namespace logging { namespace detail {
 
-namespace threading {
-    // no threads
-    struct no_mutex ;
+template struct cache_before_init<optimize::cache_string_one_str>;
 
-    struct no_lock {
-        no_lock(no_mutex &) {}
-        ~no_lock() {}
-    };
-
-    struct no_mutex {
-        typedef no_lock scoped_lock;
-        void Lock() {}
-        void Unlock() {}
-    };
-}
-
-}}}
-
-#endif
-
+}}}}

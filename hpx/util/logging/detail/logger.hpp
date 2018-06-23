@@ -18,21 +18,19 @@
 #ifndef JT28092007_logger_HPP_DEFINED
 #define JT28092007_logger_HPP_DEFINED
 
-#if defined(HPX_MSVC) && (HPX_MSVC >= 1020)
-# pragma once
-#endif
-
 #include <hpx/util/logging/detail/fwd.hpp>
 #include <hpx/util/logging/detail/cache_before_init.hpp>
-#include <hpx/util/logging/detail/find_gather.hpp>
 #include <hpx/util/logging/detail/forward_constructor.hpp>
 #include <hpx/util/logging/detail/logger_base.hpp>
+#include <hpx/util/logging/gather/ostream_like.hpp>
 
 #include <type_traits>
 
 namespace hpx { namespace util { namespace logging {
 
-    template<class holder, class gather_type> struct gather_holder { //-V690
+    template<class holder> struct gather_holder { //-V690
+        typedef gather::ostream_like::return_str gather_type;
+
         gather_holder(const holder & p_this) : m_this(p_this), m_use(true) {}
 
         gather_holder(const gather_holder & other) : m_this(other.m_this), m_use(true) {
@@ -52,22 +50,20 @@ namespace hpx { namespace util { namespace logging {
     };
 
 
-    template<class gather_msg = default_, class write_msg = default_ > struct logger ;
+    template<class write_msg = default_ > struct logger ;
 
 
     // specialize when write_msg is not set
     // - in this case, you need to derive from this
-    template<class gather_msg> struct logger<gather_msg, default_ >
-        : logger_base<gather_msg, default_> {
-        typedef typename detail::find_gather_if_default<gather_msg>
-        ::gather_type gather_type;
-        typedef typename gather_type::msg_type msg_type;
+    template<> struct logger<default_ >
+        : logger_base<default_> {
+        typedef hpx::util::logging::optimize::cache_string_one_str msg_type;
         typedef void_ write_type;
 
-        typedef logger_base<gather_msg, default_> logger_base_type;
+        typedef logger_base<default_> logger_base_type;
         using logger_base_type::cache;
 
-        typedef logger<gather_msg, default_> self_type;
+        typedef logger<default_> self_type;
 
         logger() {}
         // we have virtual functions, lets have a virtual destructor as well
@@ -81,10 +77,8 @@ namespace hpx { namespace util { namespace logging {
         /**
             reads all data about a log message (gathers all the data about it)
         */
-        gather_holder<self_type, gather_type> read_msg()
-            const { return gather_holder<self_type, gather_type>(*this) ; }
-//        gather_holder<self_type, gather_msg> read_msg()
-//        const { return gather_holder<self_type, gather_msg>(*this) ; }
+        gather_holder<self_type> read_msg()
+            const { return gather_holder<self_type>(*this) ; }
 
         write_type & writer()                    { return m_writer; }
         const write_type & writer() const        { return m_writer; }
@@ -125,20 +119,18 @@ namespace hpx { namespace util { namespace logging {
         - the caching
         - the on_destroyed (if present)
     */
-    template<class gather_msg, class write_msg>
-    struct forward_to_logger : logger<gather_msg, default_>
+    template<class write_msg>
+    struct forward_to_logger : logger<default_>
     {
-        typedef typename detail::find_gather_if_default<gather_msg>
-            ::gather_type gather_type;
-        typedef typename gather_type::msg_type msg_type;
-        typedef logger<gather_msg, default_> log_base;
+        typedef hpx::util::logging::optimize::cache_string_one_str msg_type;
+        typedef logger<default_> log_base;
         typedef typename log_base::cache_type cache_type;
 
         // ... might be called for a specialization of logger
-        // - for logger<gather_msg,write_msg*>
+        // - for logger<write_msg*>
         typedef typename std::remove_pointer<write_msg>::type write_type;
 
-        typedef logger<gather_msg, write_msg> original_logger_type;
+        typedef logger<write_msg> original_logger_type;
         forward_to_logger(original_logger_type *original_logger = nullptr)
           : m_writer(nullptr), m_original_logger( original_logger)
         {
@@ -181,15 +173,6 @@ namespace hpx { namespace util { namespace logging {
     The logger class has 2 template parameters:
 
 
-    @param gather_msg A new gather instance is created each time a message is written.
-    The @c gather_msg class needs to be default-constructible.
-    The @c gather_msg must have a function called @c .msg() which
-    contains all information about the written message.
-    It will be passed to the write_msg class.
-    You can implement your own @c gather_msg class,
-    or use any from the gather namespace.
-
-
     @param write_msg This is the object that does
     the @ref workflow_2b "second step" - the writing of the message.
     It can be a simple functor.
@@ -207,8 +190,6 @@ namespace hpx { namespace util { namespace logging {
 
 
     \n\n
-    The logger forwards
-    the gathering of the message to the @c gather_msg class.
     Once all message is gathered, it's passed on to the writer.
     This is usually done through a @ref macros_use "macro".
 
@@ -232,19 +213,16 @@ namespace hpx { namespace util { namespace logging {
     - check out the writer namespace
 
     */
-    template<class gather_msg , class write_msg > struct logger
+    template<class write_msg > struct logger
             // note: default implementation
-            //- when gather_msg and write_msg are both known
-            : logger_base<gather_msg, write_msg> {
-
-        typedef typename detail::find_gather_if_default<gather_msg>
-            ::gather_type gather_type;
-        typedef typename gather_type::msg_type msg_type;
+            //- when write_msg is known
+            : logger_base<write_msg> {
+        typedef hpx::util::logging::optimize::cache_string_one_str msg_type;
         typedef write_msg write_type;
-        typedef logger_base<gather_msg, write_msg> logger_base_type;
+        typedef logger_base<write_msg> logger_base_type;
         using logger_base_type::cache;
 
-        typedef logger<gather_msg, write_msg> self_type;
+        typedef logger<write_msg> self_type;
 
         HPX_LOGGING_FORWARD_CONSTRUCTOR_INIT(logger,m_writer, init)
 
@@ -257,8 +235,8 @@ namespace hpx { namespace util { namespace logging {
         /**
             reads all data about a log message (gathers all the data about it)
         */
-        gather_holder<self_type, gather_type> read_msg()
-            const { return gather_holder<self_type, gather_type>(*this) ; }
+        gather_holder<self_type> read_msg()
+            const { return gather_holder<self_type>(*this) ; }
 
         write_msg & writer()                    { return m_writer; }
         const write_msg & writer() const        { return m_writer; }
@@ -283,22 +261,20 @@ namespace hpx { namespace util { namespace logging {
         write_msg m_writer;
         // a base object - one that can be used to log messages,
         // without having to know the full type of the log.
-        forward_to_logger<gather_msg, write_type> m_base;
+        forward_to_logger<write_type> m_base;
     };
 
     // specialize for write_msg* pointer!
-    template<class gather_msg, class write_msg>
-    struct logger<gather_msg, write_msg* > : logger_base<gather_msg, write_msg* > {
-        typedef typename detail::find_gather_if_default<gather_msg>
-        ::gather_type gather_type;
-        typedef typename gather_type::msg_type msg_type;
+    template<class write_msg>
+    struct logger<write_msg* > : logger_base<write_msg* > {
+        typedef hpx::util::logging::optimize::cache_string_one_str msg_type;
         typedef write_msg write_type;
 
-        typedef logger_base<gather_msg, write_msg* > logger_base_type;
+        typedef logger_base<write_msg* > logger_base_type;
         using logger_base_type::cache;
 
 
-        typedef logger<gather_msg, write_msg*> self_type;
+        typedef logger<write_msg*> self_type;
 
         logger(write_msg * writer_ = nullptr) : m_writer(writer_) {
             logger_base_type::m_base.forward_to(this);
@@ -316,8 +292,8 @@ namespace hpx { namespace util { namespace logging {
         /**
             reads all data about a log message (gathers all the data about it)
         */
-        gather_holder<self_type, gather_msg> read_msg() const
-        { return gather_holder<self_type, gather_msg>(*this) ; }
+        gather_holder<self_type> read_msg() const
+        { return gather_holder<self_type>(*this) ; }
 
         write_msg & writer()                    { return *m_writer; }
         const write_msg & writer() const        { return *m_writer; }
@@ -337,29 +313,20 @@ namespace hpx { namespace util { namespace logging {
         write_msg *m_writer;
         // a base object - one that can be used to log messages,
         // without having to know the full type of the log.
-        forward_to_logger<gather_msg, write_type*> m_base;
+        forward_to_logger<write_type*> m_base;
     };
 
 
 
-
-    /** @brief Given a logger class, finds its gather_msg,
-    without needing to know the logger's definition (a typedef is enough)
-    */
-    template<class> struct logger_to_gather {};
-    template<class gather_msg, class write_msg>
-    struct logger_to_gather< logger<gather_msg,write_msg> > {
-        typedef gather_msg gather_type;
-    };
 
     /**
 
     @param write_msg the write message class. If a pointer, forwards to a pointer.
     If not a pointer, it holds it by value.
     */
-    template<class gather_msg, class write_msg> struct implement_default_logger
-        : logger<gather_msg, default_> {
-        typedef typename gather_msg::msg_type msg_type;
+    template<class write_msg> struct implement_default_logger
+        : logger<default_> {
+        typedef hpx::util::logging::optimize::cache_string_one_str msg_type;
 
         HPX_LOGGING_FORWARD_CONSTRUCTOR(implement_default_logger,m_writer)
 
@@ -372,10 +339,10 @@ namespace hpx { namespace util { namespace logging {
     };
 
     // specialization for pointers
-    template<class gather_msg, class write_msg>
-    struct implement_default_logger<gather_msg,write_msg*>
-        : logger<gather_msg, default_> {
-        typedef typename gather_msg::msg_type msg_type;
+    template<class write_msg>
+    struct implement_default_logger<write_msg*>
+        : logger<default_> {
+        typedef hpx::util::logging::optimize::cache_string_one_str msg_type;
 
         implement_default_logger(write_msg * writer = nullptr) : m_writer(writer) {
         }
@@ -395,4 +362,3 @@ namespace hpx { namespace util { namespace logging {
 }}}
 
 #endif
-

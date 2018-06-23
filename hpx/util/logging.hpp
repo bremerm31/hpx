@@ -18,8 +18,6 @@
 
 #include <boost/current_function.hpp>
 
-HPX_LOG_FORMAT_MSG(optimize::cache_string_one_str<>)
-
 ///////////////////////////////////////////////////////////////////////////////
 // specific logging
 #define LTM_(lvl)   LHPX_(lvl, "  [TM] ")   /* thread manager */
@@ -39,7 +37,7 @@ namespace hpx { namespace util
     HPX_API_EXPORT std::string levelname(int level);
 
     ///////////////////////////////////////////////////////////////////////////
-    typedef hpx::util::logging::named_logger<>::type logger_type;
+    typedef hpx::util::logging::named_logger::type logger_type;
     typedef hpx::util::logging::level::holder filter_type;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -156,7 +154,7 @@ namespace hpx { namespace util
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    typedef hpx::util::logging::named_logger<>::type logger_type;
+    typedef hpx::util::logging::named_logger::type logger_type;
     typedef hpx::util::logging::level::holder filter_type;
 
     ///////////////////////////////////////////////////////////////////////////
